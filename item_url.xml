@@ -1,0 +1,9 @@
+<com.google.android.material.card.MaterialCardView
+    android:layout_margin="8dp"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="6dp">
+
+    <TextView
+        android:id="@+id/urlText"
+        android:padding="16dp" />
+</com.google.android.material.card.MaterialCardView>
