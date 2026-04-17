@@ -1,0 +1,13 @@
+<LinearLayout
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <Switch
+        android:id="@+id/switchDark"
+        android:text="ダークモード" />
+
+    <Switch
+        android:id="@+id/switchAutoOpen"
+        android:text="URLを自動で開く" />
+
+</LinearLayout>
