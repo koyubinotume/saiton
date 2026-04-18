@@ -21,7 +21,6 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.mlkit.vision.common.InputImage;
-import com.google.mlkit.vision.text.Text;
 import com.google.mlkit.vision.text.TextRecognition;
 import com.google.mlkit.vision.text.TextRecognizer;
 
@@ -42,7 +41,6 @@ public class MainActivity extends AppCompatActivity {
 
     private List<String> history = new ArrayList<>();
     private Set<String> detectedUrls = new HashSet<>();
-    private List<Rect> detectedRects = new ArrayList<>();
 
     private TextRecognizer recognizer;
 
@@ -55,7 +53,6 @@ public class MainActivity extends AppCompatActivity {
             "(https?://[\\w\\-._~:/?#[\\]@!$&'()*+,;=%]+)|(www\\.[\\w\\-._~:/?#[\\]@!$&'()*+,;=%]+)"
     );
 
-    // 権限リクエスト
     private final ActivityResultLauncher<String> permissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
                 if (granted) startCamera();
@@ -93,7 +90,6 @@ public class MainActivity extends AppCompatActivity {
     private void checkPermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
                 != PackageManager.PERMISSION_GRANTED) {
-
             permissionLauncher.launch(Manifest.permission.CAMERA);
         } else {
             startCamera();
@@ -133,7 +129,6 @@ public class MainActivity extends AppCompatActivity {
 
     private void processImage(ImageProxy imageProxy) {
 
-        // 負荷軽減（0.5秒間隔）
         long now = System.currentTimeMillis();
         if (now - lastProcessTime < 500) {
             imageProxy.close();
@@ -154,22 +149,17 @@ public class MainActivity extends AppCompatActivity {
         recognizer.process(image)
                 .addOnSuccessListener(visionText -> {
 
-                    detectedRects.clear();
-
-                    for (Text.TextBlock block : visionText.getTextBlocks()) {
-                        for (Text.Line line : block.getLines()) {
+                    for (com.google.mlkit.vision.text.Text.TextBlock block : visionText.getTextBlocks()) {
+                        for (com.google.mlkit.vision.text.Text.Line line : block.getLines()) {
 
                             Matcher matcher = urlPattern.matcher(line.getText());
 
                             while (matcher.find()) {
-                                String url = matcher.group();
-                                handleDetectedUrl(url);
+                                handleDetectedUrl(matcher.group());
                             }
                         }
                     }
 
-                })
-                .addOnFailureListener(e -> {
                 })
                 .addOnCompleteListener(task -> imageProxy.close());
     }
@@ -178,12 +168,9 @@ public class MainActivity extends AppCompatActivity {
 
         long now = System.currentTimeMillis();
 
-        // 重複防止
         if (detectedUrls.contains(url)) return;
-
         detectedUrls.add(url);
 
-        // 履歴追加
         if (!history.contains(url)) {
             history.add(0, url);
 
@@ -196,33 +183,29 @@ public class MainActivity extends AppCompatActivity {
             saveHistory();
         }
 
-        // 自動オープン（クールダウン付き）
         if (prefs.getBoolean("auto_open", false) && now - lastOpenTime > 3000) {
-
             lastOpenTime = now;
 
             String fixed = url.startsWith("http") ? url : "https://" + url;
             startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(fixed)));
         }
 
-        // メモリ肥大防止
-        if (detectedUrls.size() > 50) {
-            detectedUrls.clear();
-        }
+        if (detectedUrls.size() > 50) detectedUrls.clear();
     }
 
     private void saveHistory() {
-        SharedPreferences prefs = getSharedPreferences("url_history", MODE_PRIVATE);
-
         JSONArray arr = new JSONArray();
         for (String url : history) arr.put(url);
 
-        prefs.edit().putString("history", arr.toString()).apply();
+        getSharedPreferences("url_history", MODE_PRIVATE)
+                .edit()
+                .putString("history", arr.toString())
+                .apply();
     }
 
     private void loadHistory() {
-        SharedPreferences prefs = getSharedPreferences("url_history", MODE_PRIVATE);
-        String json = prefs.getString("history", null);
+        String json = getSharedPreferences("url_history", MODE_PRIVATE)
+                .getString("history", null);
 
         if (json == null) return;
 
